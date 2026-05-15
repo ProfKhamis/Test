@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MG ELITE CUP 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --gold: #d4af37;
+            --gold-bright: #f9e398;
+            --accent-blue: #1e40af;
+            --text-white: #ffffff;
+            --font-main: 'Outfit', sans-serif;
+        }
+
+        body { background: var(--bg-dark); color: var(--text-white); font-family: var(--font-main); margin: 0; }
+        
+        .header { background: #000; border-bottom: 2px solid var(--gold); padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .header-title { font-weight: 900; font-size: 1.5rem; color: var(--gold); letter-spacing: 2px; }
+        .nav { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .nav button { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: 0.3s; }
+        .nav button.active, .nav button:hover { background: var(--gold); color: #000; }
+
+        .container { padding: 20px 10px; display: flex; flex-direction: column; align-items: center; }
+        .hidden { display: none !important; }
+
+        /* STANDINGS & WRAPPERS */
+        .standings-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
+        .standings-card { 
+            width: 100%; background: #000; border: 2px solid var(--gold); 
+            border-radius: 8px; padding: 20px; box-sizing: border-box; 
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+        .table-header { color: var(--gold); font-weight: 800; text-transform: uppercase; border-bottom: 2px solid var(--gold); }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th, td { padding: 12px 5px; text-align: center; border-bottom: 1px solid #222; font-size: 0.85rem; }
+        .pos-col { width: 40px; font-weight: 900; color: var(--gold); }
+        .team-col { text-align: left; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        
+        .team-logo { 
+            width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--gold);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 0.75rem; font-weight: 900; color: #fff; text-shadow: 1px 1px 2px #000;
+            text-transform: uppercase;
+        }
+        
+        .pts-col { font-weight: 900; color: var(--gold-bright); font-size: 1rem; }
+        .qualify-line { border-left: 4px solid #00ff00; }
+
+        /* FIXTURES */
+        .poster-view { width: 100%; max-width: 600px; background: #fff; color: #333; padding: 40px 20px; border-radius: 2px; box-sizing: border-box; }
+        .matchday-bar { background: #3b82f6; color: white; padding: 8px 15px; font-weight: 700; margin: 15px 0 5px 0; font-size: 0.9rem; }
+        .fixture-row { display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; padding: 10px; background: #f9f9f9; border-bottom: 1px solid #eee; margin-bottom: 2px; }
+        .f-team-left { text-align: left; font-weight: 500; font-size: 0.9rem; }
+        .f-team-right { text-align: right; font-weight: 500; font-size: 0.9rem; }
+        .f-score { text-align: center; color: #777; font-size: 0.85rem; font-weight: 700;}
+
+        /* BRACKET LAYOUT: Clean Single Row Matchups */
+        .bracket-wrapper { width: 100%; overflow-x: auto; display: flex; flex-direction: column; align-items: center; }
+        .bracket-target { background: #000; padding: 30px; border: 2px solid var(--gold); border-radius: 8px; margin-top: 10px; min-width: 950px; box-sizing: border-box;}
+        .bracket-container { display: flex; gap: 25px; justify-content: space-around; width: 100%; }
+        .bracket-col { display: flex; flex-direction: column; justify-content: space-around; gap: 15px; flex: 1; }
+        .bracket-col-title { color: var(--gold); font-size: 0.9rem; text-align: center; margin-bottom: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px dashed var(--gold); padding-bottom: 5px; }
+        .matchup-box { background: #111; border: 1px solid #333; border-radius: 6px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+        .m-team { display: flex; justify-content: space-between; padding: 12px 15px; font-size: 0.9rem; border-bottom: 1px solid #222; align-items: center; }
+        .m-team:last-of-type { border-bottom: none; }
+        .agg-score { background: var(--gold); color: #000; font-weight: 900; text-align: center; padding: 6px; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; }
+
+        /* ACTION ELEMENTS */
+        .action-bar { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .admin-btn { background: var(--gold); color: #000; border: none; padding: 10px 15px; font-weight: 800; cursor: pointer; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px; font-size: 0.85rem;}
+        .admin-btn:hover { background: var(--gold-bright); }
+
+        /* ADMIN PANEL */
+        dialog { background: #111; border: 2px solid var(--gold); color: #fff; width: 95%; max-width: 500px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        dialog::backdrop { background: rgba(0,0,0,0.8); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.75rem; color: var(--gold); margin-bottom: 5px; font-weight: 800; text-transform: uppercase; }
+        select, input { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .full-btn { width: 100%; margin-top: 10px; }
+        .team-grid-container { max-height: 200px; overflow-y: auto; border: 1px solid #222; padding: 5px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-title">MG ELITE CUP</div>
+        <div class="nav">
+            <button onclick="showView('standings')" id="nav-standings" class="active">Standings / Registration</button>
+            <button onclick="showView('fixtures')" id="nav-fixtures">Fixtures</button>
+            <button onclick="showView('bracket')" id="nav-bracket">Knockout Bracket</button>
+            <button onclick="openAdmin()" style="border-style: dashed;">Admin Control Panel</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- STANDINGS & LEAGUE VIEW -->
+        <section id="view-standings" class="standings-wrapper">
+            <div class="action-bar">
+                <button class="admin-btn" onclick="shareOrDownloadImage('standings-target', 'MG_Elite_Cup_Standings')">📸 Share/Download Standings</button>
+                <button class="admin-btn" style="background: #1e40af; color: white;" id="stage-advance-btn" onclick="promoteToKnockouts()">⚡ Advance Top Teams</button>
+            </div>
+            
+            <div id="standings-target" class="standings-card">
+                <h3 style="text-align:center; color:var(--gold); letter-spacing: 3px; margin-top: 0;" id="standings-title">LIVE LEAGUE STANDINGS</h3>
+                <div id="league-table-view">
+                    <table id="league-table">
+                        <thead class="table-header">
+                            <tr>
+                                <th>Pos</th>
+                                <th style="text-align:left">Team</th>
+                                <th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="direct-r16-notice" class="hidden" style="text-align: center; padding: 40px 10px; color: var(--gold-bright);">
+                    <h2>🏆 16 TEAMS DETECTED 🏆</h2>
+                    <p>Tournament layout is running directly as a Round of 16 Single-Elimination Knockout bracket.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FIXTURES VIEW -->
+        <section id="view-fixtures" class="hidden standings-wrapper">
+            <div class="action-bar">
+                <button class="admin-btn" onclick="shareOrDownloadImage('poster-target', 'MG_Elite_Cup_Fixtures')">📸 Share/Download Fixtures</button>
+            </div>
+            <div class="poster-view" id="poster-target">
+                <h2 style="text-align:center; text-transform:uppercase; margin-top:0; margin-bottom:20px;">Matchday Fixtures</h2>
+                <div id="fixture-list-container"></div>
+                <p style="text-align:center; font-size:0.6rem; color:#999; margin-top:30px;">DESIGNED BY PROFKHAMIS - KIRINYAGA UNIVERSITY</p>
+            </div>
+        </section>
+
+        <!-- BRACKET VIEW -->
+        <section id="view-bracket" class="hidden bracket-wrapper">
+            <div class="action-bar">
+                <button class="admin-btn" onclick="shareOrDownloadImage('bracket-target', 'MG_Elite_Cup_Bracket')">📸 Share/Download Bracket</button>
+            </div>
+            <div id="bracket-target" class="bracket-target">
+                <h2 style="text-align:center; color:var(--gold); margin-top:0; letter-spacing: 2px;">CHAMPIONSHIP BRACKET</h2>
+                <div class="bracket-container" id="bracket-ui"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ADMIN MODAL -->
+    <dialog id="adminModal">
+        <h2 style="color:var(--gold); text-align:center; margin-top:0;">ADMIN CONTROL Panel</h2>
+        
+        <!-- Manage Team Sizes Dynamically -->
+        <div style="border-bottom: 1px solid #333; margin-bottom: 15px; padding-bottom: 15px;">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+               <label style="margin:0;">Total Teams:</label>
+               <input type="number" id="team-count-config" min="4" max="16" style="width: 70px; padding: 5px;" onchange="adjustTeamCount()">
+               <small style="color:#aaa;">(Changing resets data)</small>
+            </div>
+            <label>Edit Active Team Names</label>
+            <div class="team-grid-container">
+                <div id="team-inputs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;"></div>
+            </div>
+            <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Management</button>
+        </div>
+
+        <!-- Dynamic Scoring Section -->
+        <div class="form-group">
+            <label>Select Stage to Score</label>
+            <select id="score-stage-select" onchange="populateMatchesDropdown()"></select>
+        </div>
+        <div class="form-group">
+            <label>Select Match</label>
+            <select id="score-match-select" onchange="updateScoreInputsPlaceholder()"></select>
+        </div>
+        <div class="form-group" id="leg-select-wrapper">
+            <label>Select Leg Game</label>
+            <select id="score-leg-select">
+                <option value="1">Leg 1</option>
+                <option value="2">Leg 2</option>
+            </select>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 40px 1fr; align-items:center; gap:10px;">
+            <input type="number" id="inp-s1" placeholder="Home Score">
+            <span style="text-align:center; font-weight: bold; color: var(--gold);">vs</span>
+            <input type="number" id="inp-s2" placeholder="Away Score">
+        </div>
+        
+        <button class="admin-btn full-btn" onclick="saveMatchScore()">Submit System Match Score</button>
+        <button class="admin-btn full-btn" style="background:transparent; color:#888; border:1px solid #333;" onclick="adminModal.close()">Close Panel</button>
+    </dialog>
+
+<script>
+    const STORAGE_KEY = 'mg_elite_cup_v3';
+    let state = {
+        teamCount: 10,
+        teams: [],
+        leagueMatches: [],
+        bracket: [],
+        hasKnockoutStarted: false
+    };
+
+    const teamColors = ['#1e40af','#b91c1c','#047857','#b45309', '#6d28d9', '#be185d', '#0f766e', '#a16207', '#4338ca', '#9f1239', '#5b21b6', '#9d174d', '#065f46', '#92400e', '#1e3a8a', '#78350f'];
+
+    function init() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            state = JSON.parse(saved);
+        } else {
+            resetTournamentStructure(10);
+        }
+        renderAll();
+    }
+
+    function resetTournamentStructure(count) {
+        state.teamCount = parseInt(count);
+        state.hasKnockoutStarted = false;
+        state.teams = Array.from({length: state.teamCount}, (_, i) => ({ id: i, name: `Team ${i+1}`, p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 }));
+        state.leagueMatches = [];
+        state.bracket = [];
+
+        if (state.teamCount === 16) {
+            state.hasKnockoutStarted = true;
+            generateBracketSystem(true); // Directly launch Dynamic Round of 16
+        } else {
+            generateRoundRobin();
+            generateBracketSystem(false); // standard top 8 bracket configuration
+        }
+    }
+
+    function generateRoundRobin() {
+        const n = state.teamCount;
+        const teamIds = state.teams.map(t => t.id);
+        const rounds = n % 2 === 0 ? n - 1 : n;
+        const half = Math.floor(n / 2);
+        
+        // Handle odd sizing adjustments seamlessly if needed
+        let pool = [...teamIds];
+        if (n % 2 !== 0) pool.push(-1); // dummy ghost slot for bye rounds
+        const totalTeams = pool.length;
+
+        for (let r = 0; r < rounds; r++) {
+            for (let i = 0; i < totalTeams / 2; i++) {
+                const t1 = pool[i];
+                const t2 = pool[totalTeams - 1 - i];
+                if (t1 !== -1 && t2 !== -1) {
+                    state.leagueMatches.push({ id: `l-${r}-${i}`, md: r + 1, t1, t2, s1: null, s2: null });
+                }
+            }
+            pool.splice(1, 0, pool.pop());
+        }
+    }
+
+    function generateBracketSystem(isR16) {
+        if (isR16) {
+            state.bracket = [
+                // Round of 16 (Idx 0)
+                ...Array.from({length: 8}, (_, i) => ({ id: `r16-${i}`, r: 0, t1: `Seed ${i+1}`, t2: `Seed ${16-i}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
+                // Quarters (Idx 1)
+                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 1, t1: `Winner R16 #${i*2+1}`, t2: `Winner R16 #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
+                // Semis (Idx 2)
+                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 2, t1: `Winner Q #${i*2+1}`, t2: `Winner Q #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
+                // Final (Idx 3 - Single Leg)
+                { id: 'f1', r: 3, t1: 'Finalist 1', t2: 'Finalist 2', s1: null, s2: null }
+            ];
+        } else {
+            state.bracket = [
+                // Quarters (Idx 0)
+                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 0, t1: 'TBD', t2: 'TBD', l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
+                // Semis (Idx 1)
+                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 1, t1: `Winner Q1`, t2: `Winner Q2`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
+                // Final (Idx 2 - Single Leg)
+                { id: 'f1', r: 2, t1: 'Finalist 1', t2: 'Finalist 2', s1: null, s2: null }
+            ];
+        }
+    }
+
+    // --- Core Architecture Engine Pipeline Rendering ---
+    function renderAll() {
+        if (state.teamCount !== 16) {
+            updateLeagueStats();
+            renderTable();
+            document.getElementById('league-table-view').classList.remove('hidden');
+            document.getElementById('direct-r16-notice').classList.add('hidden');
+            document.getElementById('stage-advance-btn').classList.remove('hidden');
+            document.getElementById('nav-fixtures').classList.remove('hidden');
+            document.getElementById('standings-title').innerText = "LIVE LEAGUE STANDINGS";
+        } else {
+            document.getElementById('league-table-view').classList.add('hidden');
+            document.getElementById('direct-r16-notice').classList.remove('hidden');
+            document.getElementById('stage-advance-btn').classList.add('hidden');
+            document.getElementById('nav-fixtures').classList.add('hidden');
+            document.getElementById('standings-title').innerText = "ROUND OF 16 SEEDING ACTIVE";
+            mapDirectR16Teams();
+        }
+        renderFixtures();
+        renderBracket();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function mapDirectR16Teams() {
+        // Automatically tie bracket nodes to registered names when running absolute 16 team direct layout
+        for(let i=0; i<8; i++){
+            if(state.teams[i]) state.bracket[i].t1 = state.teams[i].name;
+            if(state.teams[15-i]) state.bracket[i].t2 = state.teams[15-i].name;
+        }
+    }
+
+    function updateLeagueStats() {
+        state.teams.forEach(t => { t.p=0; t.w=0; t.d=0; t.l=0; t.gf=0; t.ga=0; t.gd=0; t.pts=0; });
+        state.leagueMatches.forEach(m => {
+            if (m.s1 === null) return;
+            const h = state.teams.find(t => t.id === m.t1);
+            const a = state.teams.find(t => t.id === m.t2);
+            if(!h || !a) return;
+            h.p++; a.p++; h.gf += m.s1; h.ga += m.s2; a.gf += m.s2; a.ga += m.s1;
+            if (m.s1 > m.s2) { h.w++; h.pts += 3; a.l++; }
+            else if (m.s2 > m.s1) { a.w++; a.pts += 3; h.l++; }
+            else { h.d++; a.d++; h.pts++; a.pts++; }
+            h.gd = h.gf - h.ga; a.gd = a.gf - a.ga;
+        });
+        state.teams.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    }
+
+    function renderTable() {
+        const html = state.teams.map((t, i) => {
+            const initials = t.name.substring(0, 2).toUpperCase();
+            const color = teamColors[t.id % teamColors.length];
+            return `
+            <tr class="${i < 8 ? 'qualify-line' : ''}">
+                <td class="pos-col">${i + 1}</td>
+                <td class="team-col">
+                    <div class="team-logo" style="background:${color}">${initials}</div>
+                    ${t.name}
+                </td>
+                <td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+                <td>${t.gf}</td><td>${t.ga}</td><td>${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                <td class="pts-col">${t.pts}</td>
+            </tr>
+            `;
+        }).join('');
+        document.querySelector('#league-table tbody').innerHTML = html;
+    }
+
+    function renderFixtures() {
+        if (state.teamCount === 16) return;
+        let html = '';
+        const maxWeeks = Math.max(...state.leagueMatches.map(m => m.md), 0);
+        for (let i = 1; i <= maxWeeks; i++) {
+            html += `<div class="matchday-bar">MATCHDAY ${i}</div>`;
+            state.leagueMatches.filter(m => m.md === i).forEach(m => {
+                const t1 = state.teams.find(t => t.id === m.t1).name;
+                const t2 = state.teams.find(t => t.id === m.t2).name;
+                html += `
+                    <div class="fixture-row">
+                        <div class="f-team-left">${t1}</div>
+                        <div class="f-score">${m.s1 !== null ? m.s1 + ' - ' + m.s2 : 'vs'}</div>
+                        <div class="f-team-right">${t2}</div>
+                    </div>
+                `;
+            });
+        }
+        document.getElementById('fixture-list-container').innerHTML = html;
+    }
+
+    function renderBracket() {
+        let rounds = [];
+        if (state.teamCount === 16) {
+            rounds = ["Round of 16", "Quarter Finals", "Semi Finals", "Grand Final"];
+        } else {
+            rounds = ["Quarter Finals", "Semi Finals", "Grand Final"];
+        }
+
+        const totalRounds = rounds.length;
+
+        document.getElementById('bracket-ui').innerHTML = rounds.map((name, idx) => `
+            <div class="bracket-col">
+                <div class="bracket-col-title">${name}</div>
+                ${state.bracket.filter(m => m.r === idx).map(m => {
+                    const isFinal = (idx === totalRounds - 1);
+                    if (isFinal) {
+                        return `
+                        <div class="matchup-box" style="border-color: var(--gold); box-shadow: 0 0 15px rgba(212,175,55,0.3);">
+                            <div class="agg-score" style="background:#fff;">🏆 GRAND FINALE 🏆</div>
+                            <div class="m-team"><span>${m.t1}</span> <b>${m.s1 ?? '-'}</b></div>
+                            <div class="m-team"><span>${m.t2}</span> <b>${m.s2 ?? '-'}</b></div>
+                        </div>`;
+                    }
+                    return `
+                    <div class="matchup-box">
+                        <div class="m-team" style="padding-bottom: 6px;"><span>${m.t1}</span> <b>${m.l1_1 !== null || m.l2_1 !== null ? m.agg1 : '-'}</b></div>
+                        <div class="m-team" style="padding-top: 6px;"><span>${m.t2}</span> <b>${m.l1_2 !== null || m.l2_2 !== null ? m.agg2 : '-'}</b></div>
+                        <div class="agg-score">AGGREGATE RESULTS</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `).join('');
+    }
+
+    // --- Admin Operations & Data Integrations ---
+    function openAdmin() {
+        document.getElementById('team-count-config').value = state.teamCount;
+        populateAdminTeams();
+        populateStagesDropdown();
+        adminModal.showModal();
+    }
+
+    function adjustTeamCount() {
+        const val = parseInt(document.getElementById('team-count-config').value);
+        if (val < 4 || val > 16) return;
+        if (confirm("Reset layout structure to fit " + val + " teams? Current match logs will be cleared!")) {
+            resetTournamentStructure(val);
+            populateAdminTeams();
+            populateStagesDropdown();
+            renderAll();
+        }
+    }
+
+    function populateAdminTeams() {
+        document.getElementById('team-inputs-grid').innerHTML = state.teams.map(t => `
+            <input type="text" value="${t.name}" data-id="${t.id}" style="font-size:0.75rem; padding:6px;">
+        `).join('');
+    }
+
+    function saveTeamNames() {
+        document.querySelectorAll('#team-inputs-grid input').forEach(inp => {
+            const id = parseInt(inp.dataset.id);
+            const tm = state.teams.find(t => t.id === id);
+            if(tm) tm.name = inp.value;
+        });
+        renderAll();
+        populateStagesDropdown();
+        alert("Team rosters synchronized successfully!");
+    }
+
+    function populateStagesDropdown() {
+        const stageSel = document.getElementById('score-stage-select');
+        let options = '';
+        if (state.teamCount !== 16) options += `<option value="league">League Group Stage</option>`;
+        
+        let rounds = (state.teamCount === 16) ? ["Round of 16", "Quarters", "Semis", "Final"] : ["Quarters", "Semis", "Final"];
+        rounds.forEach((r, i) => {
+            options += `<option value="b-${i}">${r} Knockout Stage</option>`;
+        });
+        stageSel.innerHTML = options;
+        populateMatchesDropdown();
+    }
+
+    function populateMatchesDropdown() {
+        const stage = document.getElementById('score-stage-select').value;
+        const matchSel = document.getElementById('score-match-select');
+        const legWrapper = document.getElementById('leg-select-wrapper');
+        
+        if (stage === 'league') {
+            legWrapper.style.display = 'none';
+            matchSel.innerHTML = state.leagueMatches.map(m => {
+                const h = state.teams.find(t => t.id === m.t1)?.name || 'TBD';
+                const a = state.teams.find(t => t.id === m.t2)?.name || 'TBD';
+                return `<option value="${m.id}">MD${m.md}: ${h} vs ${a}</option>`;
+            }).join('');
+        } else {
+            const roundIdx = parseInt(stage.split('-')[1]);
+            const isFinalRound = (roundIdx === ((state.teamCount === 16) ? 3 : 2));
+            legWrapper.style.display = isFinalRound ? 'none' : 'block';
+            
+            const matches = state.bracket.filter(m => m.r === roundIdx);
+            matchSel.innerHTML = matches.map((m, i) => {
+                return `<option value="${m.id}">Match #${i+1}: ${m.t1} vs ${m.t2}</option>`;
+            }).join('');
+        }
+        updateScoreInputsPlaceholder();
+    }
+
+    function updateScoreInputsPlaceholder() {
+        const stage = document.getElementById('score-stage-select').value;
+        const matchId = document.getElementById('score-match-select').value;
+        let t1Name = "Home", t2Name = "Away";
+
+        if (stage === 'league') {
+            const m = state.leagueMatches.find(x => x.id === matchId);
+            if (m) {
+                t1Name = state.teams.find(t => t.id === m.t1)?.name || "Home";
+                t2Name = state.teams.find(t => t.id === m.t2)?.name || "Away";
+            }
+        } else {
+            const m = state.bracket.find(x => x.id === matchId);
+            if (m) { t1Name = m.t1; t2Name = m.t2; }
+        }
+        document.getElementById('inp-s1').placeholder = t1Name;
+        document.getElementById('inp-s2').placeholder = t2Name;
+    }
+
+    function saveMatchScore() {
+        const stage = document.getElementById('score-stage-select').value;
+        const matchId = document.getElementById('score-match-select').value;
+        const s1 = parseInt(document.getElementById('inp-s1').value);
+        const s2 = parseInt(document.getElementById('inp-s2').value);
+
+        if (isNaN(s1) || isNaN(s2)) { alert("Provide valid numeric goals score attributes!"); return; }
+
+        if (stage === 'league') {
+            const m = state.leagueMatches.find(x => x.id === matchId);
+            m.s1 = s1; m.s2 = s2;
+        } else {
+            const m = state.bracket.find(x => x.id === matchId);
+            const roundIdx = parseInt(stage.split('-')[1]);
+            const isFinalRound = (roundIdx === ((state.teamCount === 16) ? 3 : 2));
+
+            if (isFinalRound) {
+                m.s1 = s1; m.s2 = s2;
+            } else {
+                const leg = document.getElementById('score-leg-select').value;
+                if (leg === "1") {
+                    m.l1_1 = s1; m.l1_2 = s2;
+                } else {
+                    m.l2_1 = s1; m.l2_2 = s2;
+                }
+                // Calculate background aggregation dynamically
+                m.agg1 = (m.l1_1 || 0) + (m.l2_1 || 0);
+                m.agg2 = (m.l1_2 || 0) + (m.l2_2 || 0);
+            }
+            updateBracketProgression();
+        }
+        
+        document.getElementById('inp-s1').value = '';
+        document.getElementById('inp-s2').value = '';
+        renderAll();
+        adminModal.close();
+    }
+
+    function updateBracketProgression() {
+        const isR16 = (state.teamCount === 16);
+        
+        if (isR16) {
+            // R16 -> Quarters
+            for(let i=0; i<4; i++) {
+                state.bracket[8+i].t1 = getLegWinner(state.bracket[i*2]);
+                state.bracket[8+i].t2 = getLegWinner(state.bracket[i*2+1]);
+            }
+            // Quarters -> Semis
+            for(let i=0; i<2; i++) {
+                state.bracket[12+i].t1 = getLegWinner(state.bracket[8+i*2]);
+                state.bracket[12+i].t2 = getLegWinner(state.bracket[8+i*2+1]);
+            }
+            // Semis -> Final
+            state.bracket[14].t1 = getLegWinner(state.bracket[12]);
+            state.bracket[14].t2 = getLegWinner(state.bracket[13]);
+        } else {
+            // Quarters -> Semis standard
+            state.bracket[4].t1 = getLegWinner(state.bracket[0]);
+            state.bracket[4].t2 = getLegWinner(state.bracket[1]);
+            state.bracket[5].t1 = getLegWinner(state.bracket[2]);
+            state.bracket[5].t2 = getLegWinner(state.bracket[3]);
+            // Semis -> Final
+            state.bracket[6].t1 = getLegWinner(state.bracket[4]);
+            state.bracket[6].t2 = getLegWinner(state.bracket[5]);
+        }
+    }
+
+    function getLegWinner(m) {
+        if (m.l1_1 === null && m.l2_1 === null) return "TBD";
+        if (m.agg1 > m.agg2) return m.t1;
+        if (m.agg2 > m.agg1) return m.t2;
+        return m.agg1 === m.agg2 ? `${m.t1} (Pens)` : "TBD"; // tiebreak safety identifier
+    }
+
+    function promoteToKnockouts() {
+        if(!confirm("Lock league standings and advance the top qualifying slots into the finals?")) return;
+        state.hasKnockoutStarted = true;
+        const top8 = [...state.teams].slice(0, 8);
+        
+        // Classic high-low tournament seeding structures: 1v8, 4v5, 2v7, 3v6
+        state.bracket[0].t1 = top8[0]?.name || 'TBD'; state.bracket[0].t2 = top8[7]?.name || 'TBD';
+        state.bracket[1].t1 = top8[3]?.name || 'TBD'; state.bracket[1].t2 = top8[4]?.name || 'TBD';
+        state.bracket[2].t1 = top8[1]?.name || 'TBD'; state.bracket[2].t2 = top8[6]?.name || 'TBD';
+        state.bracket[3].t1 = top8[2]?.name || 'TBD'; state.bracket[3].t2 = top8[5]?.name || 'TBD';
+        
+        renderAll();
+        showView('bracket');
+    }
+
+    function showView(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        document.getElementById(`view-${id}`).classList.remove('hidden');
+        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(`nav-${id}`).classList.add('active');
+    }
+
+    function shareOrDownloadImage(elementId, filenameBase) {
+        const targetElement = document.getElementById(elementId);
+        const originalBg = targetElement.style.backgroundColor;
+        
+        if(elementId === 'bracket-target' || elementId === 'standings-target') {
+             targetElement.style.backgroundColor = '#000000';
+        }
+
+        html2canvas(targetElement, { scale: 2, useCORS: true }).then(canvas => {
+            targetElement.style.backgroundColor = originalBg;
+            canvas.toBlob(blob => {
+                const filename = `${filenameBase}.png`;
+                const file = new File([blob], filename, { type: 'image/png' });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        title: 'MG Elite Cup 2026 Update',
+                        files: [file]
+                    }).catch(() => forceDownload(canvas, filename));
+                } else {
+                    forceDownload(canvas, filename);
+                }
+            }, 'image/png');
+        });
+    }
+
+    function forceDownload(canvas, filename) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    init();
+</script>
+</body>
+</html>
