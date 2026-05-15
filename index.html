@@ -58,7 +58,7 @@
         .f-team-right { text-align: right; font-weight: 500; font-size: 0.9rem; }
         .f-score { text-align: center; color: #777; font-size: 0.85rem; font-weight: 700;}
 
-        /* BRACKET LAYOUT: Clean Single Row Matchups */
+        /* BRACKET LAYOUT */
         .bracket-wrapper { width: 100%; overflow-x: auto; display: flex; flex-direction: column; align-items: center; }
         .bracket-target { background: #000; padding: 30px; border: 2px solid var(--gold); border-radius: 8px; margin-top: 10px; min-width: 950px; box-sizing: border-box;}
         .bracket-container { display: flex; gap: 25px; justify-content: space-around; width: 100%; }
@@ -151,7 +151,7 @@
 
     <!-- ADMIN MODAL -->
     <dialog id="adminModal">
-        <h2 style="color:var(--gold); text-align:center; margin-top:0;">ADMIN CONTROL Panel</h2>
+        <h2 style="color:var(--gold); text-align:center; margin-top:0;">ADMIN CONTROL PANEL</h2>
         
         <!-- Manage Team Sizes Dynamically -->
         <div style="border-bottom: 1px solid #333; margin-bottom: 15px; padding-bottom: 15px;">
@@ -167,7 +167,7 @@
             <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Management</button>
         </div>
 
-        <!-- Dynamic Scoring Section -->
+        <!-- Dynamic Scoring Section with Filtering -->
         <div class="form-group">
             <label>Select Stage to Score</label>
             <select id="score-stage-select" onchange="populateMatchesDropdown()"></select>
@@ -175,10 +175,11 @@
         <div class="form-group">
             <label>Select Match</label>
             <select id="score-match-select" onchange="updateScoreInputsPlaceholder()"></select>
+            <small id="no-matches-warning" style="color: #ef4444; display:none; margin-top:5px; font-weight:600;">⚠️ All fixtures in this section have been completely scored!</small>
         </div>
         <div class="form-group" id="leg-select-wrapper">
             <label>Select Leg Game</label>
-            <select id="score-leg-select">
+            <select id="score-leg-select" onchange="populateMatchesDropdown()">
                 <option value="1">Leg 1</option>
                 <option value="2">Leg 2</option>
             </select>
@@ -189,12 +190,16 @@
             <input type="number" id="inp-s2" placeholder="Away Score">
         </div>
         
-        <button class="admin-btn full-btn" onclick="saveMatchScore()">Submit System Match Score</button>
-        <button class="admin-btn full-btn" style="background:transparent; color:#888; border:1px solid #333;" onclick="adminModal.close()">Close Panel</button>
+        <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit System Match Score</button>
+        
+        <!-- HARD RESET TOURNAMENT SYSTEM -->
+        <button class="admin-btn full-btn" style="background:#dc2626; color:#fff; font-weight:900; margin-top:15px;" onclick="triggerFullTournamentReset()">⚠️ EMERGENCY RESET TOURNAMENT</button>
+        
+        <button class="admin-btn full-btn" style="background:transparent; color:#888; border:1px solid #333; margin-top:10px;" onclick="adminModal.close()">Close Panel</button>
     </dialog>
 
 <script>
-    const STORAGE_KEY = 'mg_elite_cup_v3';
+    const STORAGE_KEY = 'mg_elite_cup_v4';
     let state = {
         teamCount: 10,
         teams: [],
@@ -224,10 +229,10 @@
 
         if (state.teamCount === 16) {
             state.hasKnockoutStarted = true;
-            generateBracketSystem(true); // Directly launch Dynamic Round of 16
+            generateBracketSystem(true);
         } else {
             generateRoundRobin();
-            generateBracketSystem(false); // standard top 8 bracket configuration
+            generateBracketSystem(false);
         }
     }
 
@@ -237,9 +242,8 @@
         const rounds = n % 2 === 0 ? n - 1 : n;
         const half = Math.floor(n / 2);
         
-        // Handle odd sizing adjustments seamlessly if needed
         let pool = [...teamIds];
-        if (n % 2 !== 0) pool.push(-1); // dummy ghost slot for bye rounds
+        if (n % 2 !== 0) pool.push(-1);
         const totalTeams = pool.length;
 
         for (let r = 0; r < rounds; r++) {
@@ -257,28 +261,20 @@
     function generateBracketSystem(isR16) {
         if (isR16) {
             state.bracket = [
-                // Round of 16 (Idx 0)
-                ...Array.from({length: 8}, (_, i) => ({ id: `r16-${i}`, r: 0, t1: `Seed ${i+1}`, t2: `Seed ${16-i}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
-                // Quarters (Idx 1)
-                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 1, t1: `Winner R16 #${i*2+1}`, t2: `Winner R16 #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
-                // Semis (Idx 2)
-                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 2, t1: `Winner Q #${i*2+1}`, t2: `Winner Q #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
-                // Final (Idx 3 - Single Leg)
+                ...Array.from({length: 8}, (_, i) => ({ id: `r16-${i}`, r: 0, t1: `Seed ${i+1}`, t2: `Seed ${16-i}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:null, agg2:null })),
+                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 1, t1: `Winner R16 #${i*2+1}`, t2: `Winner R16 #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:null, agg2:null })),
+                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 2, t1: `Winner Q #${i*2+1}`, t2: `Winner Q #${i*2+2}`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:null, agg2:null })),
                 { id: 'f1', r: 3, t1: 'Finalist 1', t2: 'Finalist 2', s1: null, s2: null }
             ];
         } else {
             state.bracket = [
-                // Quarters (Idx 0)
-                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 0, t1: 'TBD', t2: 'TBD', l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
-                // Semis (Idx 1)
-                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 1, t1: `Winner Q1`, t2: `Winner Q2`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:0, agg2:0 })),
-                // Final (Idx 2 - Single Leg)
+                ...Array.from({length: 4}, (_, i) => ({ id: `q-${i}`, r: 0, t1: 'TBD', t2: 'TBD', l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:null, agg2:null })),
+                ...Array.from({length: 2}, (_, i) => ({ id: `s-${i}`, r: 1, t1: `Winner Q1`, t2: `Winner Q2`, l1_1:null, l1_2:null, l2_1:null, l2_2:null, agg1:null, agg2:null })),
                 { id: 'f1', r: 2, t1: 'Finalist 1', t2: 'Finalist 2', s1: null, s2: null }
             ];
         }
     }
 
-    // --- Core Architecture Engine Pipeline Rendering ---
     function renderAll() {
         if (state.teamCount !== 16) {
             updateLeagueStats();
@@ -302,7 +298,6 @@
     }
 
     function mapDirectR16Teams() {
-        // Automatically tie bracket nodes to registered names when running absolute 16 team direct layout
         for(let i=0; i<8; i++){
             if(state.teams[i]) state.bracket[i].t1 = state.teams[i].name;
             if(state.teams[15-i]) state.bracket[i].t2 = state.teams[15-i].name;
@@ -391,8 +386,8 @@
                     }
                     return `
                     <div class="matchup-box">
-                        <div class="m-team" style="padding-bottom: 6px;"><span>${m.t1}</span> <b>${m.l1_1 !== null || m.l2_1 !== null ? m.agg1 : '-'}</b></div>
-                        <div class="m-team" style="padding-top: 6px;"><span>${m.t2}</span> <b>${m.l1_2 !== null || m.l2_2 !== null ? m.agg2 : '-'}</b></div>
+                        <div class="m-team" style="padding-bottom: 6px;"><span>${m.t1}</span> <b>${m.agg1 !== null ? m.agg1 : '-'}</b></div>
+                        <div class="m-team" style="padding-top: 6px;"><span>${m.t2}</span> <b>${m.agg2 !== null ? m.agg2 : '-'}</b></div>
                         <div class="agg-score">AGGREGATE RESULTS</div>
                     </div>`;
                 }).join('')}
@@ -416,6 +411,20 @@
             populateAdminTeams();
             populateStagesDropdown();
             renderAll();
+        }
+    }
+
+    function triggerFullTournamentReset() {
+        const val = parseInt(document.getElementById('team-count-config').value) || 10;
+        if(confirm("⚠️ CRITICAL ACTION!\nAre you absolutely sure you want to completely wipe out the tournament data, match history, and configurations? This cannot be undone!")){
+            localStorage.removeItem(STORAGE_KEY);
+            resetTournamentStructure(val);
+            populateAdminTeams();
+            populateStagesDropdown();
+            renderAll();
+            adminModal.close();
+            showView('standings');
+            alert("Tournament wiped clean. Fresh setup ready!");
         }
     }
 
@@ -453,10 +462,17 @@
         const stage = document.getElementById('score-stage-select').value;
         const matchSel = document.getElementById('score-match-select');
         const legWrapper = document.getElementById('leg-select-wrapper');
+        const warnMessage = document.getElementById('no-matches-warning');
+        const submitBtn = document.getElementById('submit-score-btn');
+        const legSel = document.getElementById('score-leg-select').value;
         
+        let filteredOptions = '';
+
         if (stage === 'league') {
             legWrapper.style.display = 'none';
-            matchSel.innerHTML = state.leagueMatches.map(m => {
+            const openLeagueMatches = state.leagueMatches.filter(m => m.s1 === null);
+            
+            filteredOptions = openLeagueMatches.map(m => {
                 const h = state.teams.find(t => t.id === m.t1)?.name || 'TBD';
                 const a = state.teams.find(t => t.id === m.t2)?.name || 'TBD';
                 return `<option value="${m.id}">MD${m.md}: ${h} vs ${a}</option>`;
@@ -466,17 +482,47 @@
             const isFinalRound = (roundIdx === ((state.teamCount === 16) ? 3 : 2));
             legWrapper.style.display = isFinalRound ? 'none' : 'block';
             
-            const matches = state.bracket.filter(m => m.r === roundIdx);
-            matchSel.innerHTML = matches.map((m, i) => {
+            const roundMatches = state.bracket.filter(m => m.r === roundIdx);
+            let openKnockoutMatches = [];
+
+            if (isFinalRound) {
+                openKnockoutMatches = roundMatches.filter(m => m.s1 === null);
+            } else {
+                if (legSel === "1") {
+                    openKnockoutMatches = roundMatches.filter(m => m.l1_1 === null);
+                } else {
+                    openKnockoutMatches = roundMatches.filter(m => m.l2_1 === null);
+                }
+            }
+
+            filteredOptions = openKnockoutMatches.map((m, i) => {
                 return `<option value="${m.id}">Match #${i+1}: ${m.t1} vs ${m.t2}</option>`;
             }).join('');
         }
-        updateScoreInputsPlaceholder();
+
+        matchSel.innerHTML = filteredOptions;
+
+        if (filteredOptions === '') {
+            warnMessage.style.display = 'block';
+            matchSel.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.4';
+            document.getElementById('inp-s1').placeholder = '-';
+            document.getElementById('inp-s2').placeholder = '-';
+        } else {
+            warnMessage.style.display = 'none';
+            matchSel.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            updateScoreInputsPlaceholder();
+        }
     }
 
     function updateScoreInputsPlaceholder() {
         const stage = document.getElementById('score-stage-select').value;
         const matchId = document.getElementById('score-match-select').value;
+        if(!matchId) return;
+
         let t1Name = "Home", t2Name = "Away";
 
         if (stage === 'league') {
@@ -499,6 +545,7 @@
         const s1 = parseInt(document.getElementById('inp-s1').value);
         const s2 = parseInt(document.getElementById('inp-s2').value);
 
+        if (!matchId) return;
         if (isNaN(s1) || isNaN(s2)) { alert("Provide valid numeric goals score attributes!"); return; }
 
         if (stage === 'league') {
@@ -518,9 +565,6 @@
                 } else {
                     m.l2_1 = s1; m.l2_2 = s2;
                 }
-                // Calculate background aggregation dynamically
-                m.agg1 = (m.l1_1 || 0) + (m.l2_1 || 0);
-                m.agg2 = (m.l1_2 || 0) + (m.l2_2 || 0);
             }
             updateBracketProgression();
         }
@@ -534,37 +578,48 @@
     function updateBracketProgression() {
         const isR16 = (state.teamCount === 16);
         
+        const calculateAggregates = (m) => {
+            if (m.l1_1 === null && m.l2_1 === null) {
+                m.agg1 = null;
+                m.agg2 = null;
+            } else {
+                m.agg1 = (m.l1_1 || 0) + (m.l2_1 || 0);
+                m.agg2 = (m.l1_2 || 0) + (m.l2_2 || 0);
+            }
+        };
+
+        state.bracket.forEach(m => {
+            if (m.r !== ((isR16) ? 3 : 2)) {
+                calculateAggregates(m);
+            }
+        });
+        
         if (isR16) {
-            // R16 -> Quarters
             for(let i=0; i<4; i++) {
                 state.bracket[8+i].t1 = getLegWinner(state.bracket[i*2]);
                 state.bracket[8+i].t2 = getLegWinner(state.bracket[i*2+1]);
             }
-            // Quarters -> Semis
             for(let i=0; i<2; i++) {
                 state.bracket[12+i].t1 = getLegWinner(state.bracket[8+i*2]);
                 state.bracket[12+i].t2 = getLegWinner(state.bracket[8+i*2+1]);
             }
-            // Semis -> Final
             state.bracket[14].t1 = getLegWinner(state.bracket[12]);
             state.bracket[14].t2 = getLegWinner(state.bracket[13]);
         } else {
-            // Quarters -> Semis standard
             state.bracket[4].t1 = getLegWinner(state.bracket[0]);
             state.bracket[4].t2 = getLegWinner(state.bracket[1]);
             state.bracket[5].t1 = getLegWinner(state.bracket[2]);
             state.bracket[5].t2 = getLegWinner(state.bracket[3]);
-            // Semis -> Final
             state.bracket[6].t1 = getLegWinner(state.bracket[4]);
             state.bracket[6].t2 = getLegWinner(state.bracket[5]);
         }
     }
 
     function getLegWinner(m) {
-        if (m.l1_1 === null && m.l2_1 === null) return "TBD";
+        if (m.l1_1 === null || m.l2_1 === null) return "TBD"; 
         if (m.agg1 > m.agg2) return m.t1;
         if (m.agg2 > m.agg1) return m.t2;
-        return m.agg1 === m.agg2 ? `${m.t1} (Pens)` : "TBD"; // tiebreak safety identifier
+        return m.agg1 === m.agg2 ? `${m.t1} (Pens)` : "TBD";
     }
 
     function promoteToKnockouts() {
@@ -572,7 +627,6 @@
         state.hasKnockoutStarted = true;
         const top8 = [...state.teams].slice(0, 8);
         
-        // Classic high-low tournament seeding structures: 1v8, 4v5, 2v7, 3v6
         state.bracket[0].t1 = top8[0]?.name || 'TBD'; state.bracket[0].t2 = top8[7]?.name || 'TBD';
         state.bracket[1].t1 = top8[3]?.name || 'TBD'; state.bracket[1].t2 = top8[4]?.name || 'TBD';
         state.bracket[2].t1 = top8[1]?.name || 'TBD'; state.bracket[2].t2 = top8[6]?.name || 'TBD';
