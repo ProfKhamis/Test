@@ -77,6 +77,7 @@
         select, input { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
         .full-btn { width: 100%; margin-top: 10px; }
         .team-grid-container { max-height: 200px; overflow-y: auto; border: 1px solid #222; padding: 5px; margin-bottom: 10px; }
+        .recovery-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -184,6 +185,13 @@
         </div>
         
         <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit Match Score</button>
+        
+        <div class="recovery-btns">
+            <button class="admin-btn" style="background:#059669; color:#fff;" onclick="exportData()">💾 Export JSON</button>
+            <button class="admin-btn" style="background:#7c3aed; color:#fff;" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
+            <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(event)">
+        </div>
+
         <button class="admin-btn full-btn" style="background:#dc2626; color:#fff; font-weight:900; margin-top:15px;" onclick="triggerFullTournamentReset()">⚠️ EMERGENCY RESET TOURNAMENT</button>
         <button class="admin-btn full-btn" style="background:transparent; color:#888; border:1px solid #333; margin-top:10px;" onclick="adminModal.close()">Close Panel</button>
     </dialog>
@@ -305,7 +313,14 @@
             else { h.d++; a.d++; h.pts++; a.pts++; }
             h.gd = h.gf - h.ga; a.gd = a.gf - a.ga;
         });
-        state.teams.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+        
+        // Sorting Logic: Points > GD > GF > Alphabetical Name
+        state.teams.sort((a, b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.gd !== a.gd) return b.gd - a.gd;
+            if (b.gf !== a.gf) return b.gf - a.gf;
+            return a.name.localeCompare(b.name); 
+        });
     }
 
     function renderTable() {
@@ -428,7 +443,6 @@
             }
         });
 
-        // Global propagation: Find old names in bracket and update them
         state.bracket.forEach(match => {
             if (nameMap[match.t1]) match.t1 = nameMap[match.t1];
             if (nameMap[match.t2]) match.t2 = nameMap[match.t2];
@@ -615,6 +629,39 @@
                 }
             });
         });
+    }
+
+    // --- RECOVERY FUNCTIONS ---
+    function exportData() {
+        const dataStr = JSON.stringify(state, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const exportFileDefaultName = 'MG_Elite_Cup_Backup.json';
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedState = JSON.parse(e.target.result);
+                if (importedState.teams && importedState.leagueMatches) {
+                    state = importedState;
+                    renderAll();
+                    alert("Data recovered successfully!");
+                    adminModal.close();
+                } else {
+                    throw new Error("Invalid Format");
+                }
+            } catch (err) {
+                alert("Error: Could not load the recovery file. Make sure it's a valid MG Elite JSON.");
+            }
+        };
+        reader.readAsText(file);
     }
 
     init();
