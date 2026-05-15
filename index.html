@@ -27,7 +27,6 @@
         .container { padding: 20px 10px; display: flex; flex-direction: column; align-items: center; }
         .hidden { display: none !important; }
 
-        /* STANDINGS & WRAPPERS */
         .standings-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
         .standings-card { 
             width: 100%; background: #000; border: 2px solid var(--gold); 
@@ -50,7 +49,6 @@
         .pts-col { font-weight: 900; color: var(--gold-bright); font-size: 1rem; }
         .qualify-line { border-left: 4px solid #00ff00; }
 
-        /* FIXTURES */
         .poster-view { width: 100%; max-width: 600px; background: #fff; color: #333; padding: 40px 20px; border-radius: 2px; box-sizing: border-box; }
         .matchday-bar { background: #3b82f6; color: white; padding: 8px 15px; font-weight: 700; margin: 15px 0 5px 0; font-size: 0.9rem; }
         .fixture-row { display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; padding: 10px; background: #f9f9f9; border-bottom: 1px solid #eee; margin-bottom: 2px; }
@@ -58,7 +56,6 @@
         .f-team-right { text-align: right; font-weight: 500; font-size: 0.9rem; }
         .f-score { text-align: center; color: #777; font-size: 0.85rem; font-weight: 700;}
 
-        /* BRACKET LAYOUT */
         .bracket-wrapper { width: 100%; overflow-x: auto; display: flex; flex-direction: column; align-items: center; }
         .bracket-target { background: #000; padding: 30px; border: 2px solid var(--gold); border-radius: 8px; margin-top: 10px; min-width: 950px; box-sizing: border-box;}
         .bracket-container { display: flex; gap: 25px; justify-content: space-around; width: 100%; }
@@ -69,12 +66,10 @@
         .m-team:last-of-type { border-bottom: none; }
         .agg-score { background: var(--gold); color: #000; font-weight: 900; text-align: center; padding: 6px; font-size: 0.8rem; letter-spacing: 1px; text-transform: uppercase; }
 
-        /* ACTION ELEMENTS */
         .action-bar { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
         .admin-btn { background: var(--gold); color: #000; border: none; padding: 10px 15px; font-weight: 800; cursor: pointer; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px; font-size: 0.85rem;}
         .admin-btn:hover { background: var(--gold-bright); }
 
-        /* ADMIN PANEL */
         dialog { background: #111; border: 2px solid var(--gold); color: #fff; width: 95%; max-width: 500px; border-radius: 12px; padding: 20px; max-height: 85vh; overflow-y: auto; }
         dialog::backdrop { background: rgba(0,0,0,0.8); }
         .form-group { margin-bottom: 15px; }
@@ -153,7 +148,6 @@
     <dialog id="adminModal">
         <h2 style="color:var(--gold); text-align:center; margin-top:0;">ADMIN CONTROL PANEL</h2>
         
-        <!-- Manage Team Sizes Dynamically -->
         <div style="border-bottom: 1px solid #333; margin-bottom: 15px; padding-bottom: 15px;">
             <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                <label style="margin:0;">Total Teams:</label>
@@ -164,10 +158,9 @@
             <div class="team-grid-container">
                 <div id="team-inputs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;"></div>
             </div>
-            <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Management</button>
+            <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Names</button>
         </div>
 
-        <!-- Dynamic Scoring Section with Filtering -->
         <div class="form-group">
             <label>Select Stage to Score</label>
             <select id="score-stage-select" onchange="populateMatchesDropdown()"></select>
@@ -175,7 +168,7 @@
         <div class="form-group">
             <label>Select Match</label>
             <select id="score-match-select" onchange="updateScoreInputsPlaceholder()"></select>
-            <small id="no-matches-warning" style="color: #ef4444; display:none; margin-top:5px; font-weight:600;">⚠️ All fixtures in this section have been completely scored!</small>
+            <small id="no-matches-warning" style="color: #ef4444; display:none; margin-top:5px; font-weight:600;">⚠️ All matches in this section are completed!</small>
         </div>
         <div class="form-group" id="leg-select-wrapper">
             <label>Select Leg Game</label>
@@ -190,11 +183,8 @@
             <input type="number" id="inp-s2" placeholder="Away Score">
         </div>
         
-        <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit System Match Score</button>
-        
-        <!-- HARD RESET TOURNAMENT SYSTEM -->
+        <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit Match Score</button>
         <button class="admin-btn full-btn" style="background:#dc2626; color:#fff; font-weight:900; margin-top:15px;" onclick="triggerFullTournamentReset()">⚠️ EMERGENCY RESET TOURNAMENT</button>
-        
         <button class="admin-btn full-btn" style="background:transparent; color:#888; border:1px solid #333; margin-top:10px;" onclick="adminModal.close()">Close Panel</button>
     </dialog>
 
@@ -240,8 +230,6 @@
         const n = state.teamCount;
         const teamIds = state.teams.map(t => t.id);
         const rounds = n % 2 === 0 ? n - 1 : n;
-        const half = Math.floor(n / 2);
-        
         let pool = [...teamIds];
         if (n % 2 !== 0) pool.push(-1);
         const totalTeams = pool.length;
@@ -290,7 +278,7 @@
             document.getElementById('stage-advance-btn').classList.add('hidden');
             document.getElementById('nav-fixtures').classList.add('hidden');
             document.getElementById('standings-title').innerText = "ROUND OF 16 SEEDING ACTIVE";
-            mapDirectR16Teams();
+            if (state.bracket[0].t1.includes("Seed")) mapDirectR16Teams();
         }
         renderFixtures();
         renderBracket();
@@ -362,13 +350,7 @@
     }
 
     function renderBracket() {
-        let rounds = [];
-        if (state.teamCount === 16) {
-            rounds = ["Round of 16", "Quarter Finals", "Semi Finals", "Grand Final"];
-        } else {
-            rounds = ["Quarter Finals", "Semi Finals", "Grand Final"];
-        }
-
+        let rounds = (state.teamCount === 16) ? ["Round of 16", "Quarter Finals", "Semi Finals", "Grand Final"] : ["Quarter Finals", "Semi Finals", "Grand Final"];
         const totalRounds = rounds.length;
 
         document.getElementById('bracket-ui').innerHTML = rounds.map((name, idx) => `
@@ -395,7 +377,6 @@
         `).join('');
     }
 
-    // --- Admin Operations & Data Integrations ---
     function openAdmin() {
         document.getElementById('team-count-config').value = state.teamCount;
         populateAdminTeams();
@@ -405,18 +386,21 @@
 
     function adjustTeamCount() {
         const val = parseInt(document.getElementById('team-count-config').value);
+        if (val === state.teamCount) return;
         if (val < 4 || val > 16) return;
-        if (confirm("Reset layout structure to fit " + val + " teams? Current match logs will be cleared!")) {
+        if (confirm("Reset tournament for " + val + " teams? Matches will be cleared!")) {
             resetTournamentStructure(val);
             populateAdminTeams();
             populateStagesDropdown();
             renderAll();
+        } else {
+            document.getElementById('team-count-config').value = state.teamCount;
         }
     }
 
     function triggerFullTournamentReset() {
         const val = parseInt(document.getElementById('team-count-config').value) || 10;
-        if(confirm("⚠️ CRITICAL ACTION!\nAre you absolutely sure you want to completely wipe out the tournament data, match history, and configurations? This cannot be undone!")){
+        if(confirm("⚠️ CRITICAL ACTION!\nWipe everything and start fresh?")){
             localStorage.removeItem(STORAGE_KEY);
             resetTournamentStructure(val);
             populateAdminTeams();
@@ -424,7 +408,6 @@
             renderAll();
             adminModal.close();
             showView('standings');
-            alert("Tournament wiped clean. Fresh setup ready!");
         }
     }
 
@@ -435,14 +418,25 @@
     }
 
     function saveTeamNames() {
+        const nameMap = {};
         document.querySelectorAll('#team-inputs-grid input').forEach(inp => {
             const id = parseInt(inp.dataset.id);
             const tm = state.teams.find(t => t.id === id);
-            if(tm) tm.name = inp.value;
+            if(tm) {
+                nameMap[tm.name] = inp.value;
+                tm.name = inp.value;
+            }
         });
+
+        // Global propagation: Find old names in bracket and update them
+        state.bracket.forEach(match => {
+            if (nameMap[match.t1]) match.t1 = nameMap[match.t1];
+            if (nameMap[match.t2]) match.t2 = nameMap[match.t2];
+        });
+
         renderAll();
         populateStagesDropdown();
-        alert("Team rosters synchronized successfully!");
+        alert("Team names synchronized across the system!");
     }
 
     function populateStagesDropdown() {
@@ -471,7 +465,6 @@
         if (stage === 'league') {
             legWrapper.style.display = 'none';
             const openLeagueMatches = state.leagueMatches.filter(m => m.s1 === null);
-            
             filteredOptions = openLeagueMatches.map(m => {
                 const h = state.teams.find(t => t.id === m.t1)?.name || 'TBD';
                 const a = state.teams.find(t => t.id === m.t2)?.name || 'TBD';
@@ -483,39 +476,20 @@
             legWrapper.style.display = isFinalRound ? 'none' : 'block';
             
             const roundMatches = state.bracket.filter(m => m.r === roundIdx);
-            let openKnockoutMatches = [];
+            let openKnockoutMatches = (isFinalRound) ? 
+                roundMatches.filter(m => m.s1 === null) : 
+                (legSel === "1" ? roundMatches.filter(m => m.l1_1 === null) : roundMatches.filter(m => m.l2_1 === null));
 
-            if (isFinalRound) {
-                openKnockoutMatches = roundMatches.filter(m => m.s1 === null);
-            } else {
-                if (legSel === "1") {
-                    openKnockoutMatches = roundMatches.filter(m => m.l1_1 === null);
-                } else {
-                    openKnockoutMatches = roundMatches.filter(m => m.l2_1 === null);
-                }
-            }
-
-            filteredOptions = openKnockoutMatches.map((m, i) => {
-                return `<option value="${m.id}">Match #${i+1}: ${m.t1} vs ${m.t2}</option>`;
-            }).join('');
+            filteredOptions = openKnockoutMatches.map((m, i) => `<option value="${m.id}">${m.t1} vs ${m.t2}</option>`).join('');
         }
 
         matchSel.innerHTML = filteredOptions;
-
-        if (filteredOptions === '') {
-            warnMessage.style.display = 'block';
-            matchSel.style.display = 'none';
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.4';
-            document.getElementById('inp-s1').placeholder = '-';
-            document.getElementById('inp-s2').placeholder = '-';
-        } else {
-            warnMessage.style.display = 'none';
-            matchSel.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            updateScoreInputsPlaceholder();
-        }
+        const hasOptions = filteredOptions !== '';
+        warnMessage.style.display = hasOptions ? 'none' : 'block';
+        matchSel.style.display = hasOptions ? 'block' : 'none';
+        submitBtn.disabled = !hasOptions;
+        submitBtn.style.opacity = hasOptions ? '1' : '0.4';
+        if(hasOptions) updateScoreInputsPlaceholder();
     }
 
     function updateScoreInputsPlaceholder() {
@@ -524,16 +498,13 @@
         if(!matchId) return;
 
         let t1Name = "Home", t2Name = "Away";
-
         if (stage === 'league') {
             const m = state.leagueMatches.find(x => x.id === matchId);
-            if (m) {
-                t1Name = state.teams.find(t => t.id === m.t1)?.name || "Home";
-                t2Name = state.teams.find(t => t.id === m.t2)?.name || "Away";
-            }
+            t1Name = state.teams.find(t => t.id === m.t1)?.name || "Home";
+            t2Name = state.teams.find(t => t.id === m.t2)?.name || "Away";
         } else {
             const m = state.bracket.find(x => x.id === matchId);
-            if (m) { t1Name = m.t1; t2Name = m.t2; }
+            t1Name = m.t1; t2Name = m.t2;
         }
         document.getElementById('inp-s1').placeholder = t1Name;
         document.getElementById('inp-s2').placeholder = t2Name;
@@ -545,8 +516,7 @@
         const s1 = parseInt(document.getElementById('inp-s1').value);
         const s2 = parseInt(document.getElementById('inp-s2').value);
 
-        if (!matchId) return;
-        if (isNaN(s1) || isNaN(s2)) { alert("Provide valid numeric goals score attributes!"); return; }
+        if (!matchId || isNaN(s1) || isNaN(s2)) return;
 
         if (stage === 'league') {
             const m = state.leagueMatches.find(x => x.id === matchId);
@@ -560,11 +530,8 @@
                 m.s1 = s1; m.s2 = s2;
             } else {
                 const leg = document.getElementById('score-leg-select').value;
-                if (leg === "1") {
-                    m.l1_1 = s1; m.l1_2 = s2;
-                } else {
-                    m.l2_1 = s1; m.l2_2 = s2;
-                }
+                if (leg === "1") { m.l1_1 = s1; m.l1_2 = s2; } 
+                else { m.l2_1 = s1; m.l2_2 = s2; }
             }
             updateBracketProgression();
         }
@@ -577,20 +544,12 @@
 
     function updateBracketProgression() {
         const isR16 = (state.teamCount === 16);
-        
-        const calculateAggregates = (m) => {
-            if (m.l1_1 === null && m.l2_1 === null) {
-                m.agg1 = null;
-                m.agg2 = null;
-            } else {
-                m.agg1 = (m.l1_1 || 0) + (m.l2_1 || 0);
-                m.agg2 = (m.l1_2 || 0) + (m.l2_2 || 0);
-            }
-        };
-
         state.bracket.forEach(m => {
             if (m.r !== ((isR16) ? 3 : 2)) {
-                calculateAggregates(m);
+                if (m.l1_1 !== null || m.l2_1 !== null) {
+                    m.agg1 = (m.l1_1 || 0) + (m.l2_1 || 0);
+                    m.agg2 = (m.l1_2 || 0) + (m.l2_2 || 0);
+                }
             }
         });
         
@@ -619,19 +578,17 @@
         if (m.l1_1 === null || m.l2_1 === null) return "TBD"; 
         if (m.agg1 > m.agg2) return m.t1;
         if (m.agg2 > m.agg1) return m.t2;
-        return m.agg1 === m.agg2 ? `${m.t1} (Pens)` : "TBD";
+        return `${m.t1} (Pens)`;
     }
 
     function promoteToKnockouts() {
-        if(!confirm("Lock league standings and advance the top qualifying slots into the finals?")) return;
+        if(!confirm("Advance top teams to bracket?")) return;
         state.hasKnockoutStarted = true;
         const top8 = [...state.teams].slice(0, 8);
-        
         state.bracket[0].t1 = top8[0]?.name || 'TBD'; state.bracket[0].t2 = top8[7]?.name || 'TBD';
         state.bracket[1].t1 = top8[3]?.name || 'TBD'; state.bracket[1].t2 = top8[4]?.name || 'TBD';
         state.bracket[2].t1 = top8[1]?.name || 'TBD'; state.bracket[2].t2 = top8[6]?.name || 'TBD';
         state.bracket[3].t1 = top8[2]?.name || 'TBD'; state.bracket[3].t2 = top8[5]?.name || 'TBD';
-        
         renderAll();
         showView('bracket');
     }
@@ -645,35 +602,19 @@
 
     function shareOrDownloadImage(elementId, filenameBase) {
         const targetElement = document.getElementById(elementId);
-        const originalBg = targetElement.style.backgroundColor;
-        
-        if(elementId === 'bracket-target' || elementId === 'standings-target') {
-             targetElement.style.backgroundColor = '#000000';
-        }
-
-        html2canvas(targetElement, { scale: 2, useCORS: true }).then(canvas => {
-            targetElement.style.backgroundColor = originalBg;
+        html2canvas(targetElement, { scale: 2, useCORS: true, backgroundColor: "#000000" }).then(canvas => {
             canvas.toBlob(blob => {
-                const filename = `${filenameBase}.png`;
-                const file = new File([blob], filename, { type: 'image/png' });
-
+                const file = new File([blob], `${filenameBase}.png`, { type: 'image/png' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                        title: 'MG Elite Cup 2026 Update',
-                        files: [file]
-                    }).catch(() => forceDownload(canvas, filename));
+                    navigator.share({ files: [file] });
                 } else {
-                    forceDownload(canvas, filename);
+                    const link = document.createElement('a');
+                    link.download = `${filenameBase}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
                 }
-            }, 'image/png');
+            });
         });
-    }
-
-    function forceDownload(canvas, filename) {
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
     }
 
     init();
