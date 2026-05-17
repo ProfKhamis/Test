@@ -88,7 +88,7 @@
             <button onclick="showView('standings')" id="nav-standings" class="active">Standings / Registration</button>
             <button onclick="showView('fixtures')" id="nav-fixtures">Fixtures</button>
             <button onclick="showView('bracket')" id="nav-bracket">Knockout Bracket</button>
-            <button onclick="openAdmin()" style="border-style: dashed;">Admin Control Panel</button>
+            <button onclick="openAdminWithDeviceLock()" style="border-style: dashed;">🔒 Admin Control Panel</button>
         </div>
     </header>
 
@@ -218,6 +218,60 @@
         renderAll();
     }
 
+    // --- BIOMETRIC / DEVICE SECURITY LOCK ---
+    async function openAdminWithDeviceLock() {
+        if (!window.PublicKeyCredential) {
+            alert("Your browser does not support device-level biometric authentication. Opening panel normally.");
+            openAdmin(); 
+            return;
+        }
+
+        const authIdRaw = localStorage.getItem('mg_admin_auth_id');
+
+        try {
+            if (!authIdRaw) {
+                if (confirm("Admin device lock is not set up yet.\n\nDo you want to secure this control panel using your phone's native lock system (Fingerprint, Face ID, or PIN)?")) {
+                    const publicKey = {
+                        challenge: new Uint8Array(32),
+                        rp: { name: "MG ELITE CUP" },
+                        user: {
+                            id: new Uint8Array(16),
+                            name: "admin",
+                            displayName: "Tournament Admin"
+                        },
+                        pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                        authenticatorSelection: { userVerification: "required" },
+                        timeout: 60000
+                    };
+
+                    const cred = await navigator.credentials.create({ publicKey });
+                    const credId = Array.from(new Uint8Array(cred.rawId));
+                    localStorage.setItem('mg_admin_auth_id', JSON.stringify(credId));
+                    
+                    alert("Device security paired successfully!");
+                    openAdmin(); 
+                }
+            } else {
+                const storedId = new Uint8Array(JSON.parse(authIdRaw));
+                const publicKey = {
+                    challenge: new Uint8Array(32), 
+                    allowCredentials: [{
+                        id: storedId,
+                        type: "public-key"
+                    }],
+                    userVerification: "required",
+                    timeout: 60000
+                };
+
+                await navigator.credentials.get({ publicKey });
+                openAdmin(); 
+            }
+        } catch (err) {
+            console.error("Authentication Error:", err);
+            alert("Authentication failed or canceled. Access Denied.");
+        }
+    }
+
     function resetTournamentStructure(count) {
         state.teamCount = parseInt(count);
         state.hasKnockoutStarted = false;
@@ -327,15 +381,14 @@
             const initials = t.name.substring(0, 2).toUpperCase();
             const color = teamColors[t.id % teamColors.length];
             
-            // Dynamic styling configuration for the Goal Difference Indicator
-            let gdStyle = 'color: #888888;'; // Neutral grey for 0 GD
+            let gdStyle = 'color: #888888;';
             let gdText = '0';
             
             if (t.gd > 0) {
-                gdStyle = 'color: #22c55e; font-weight: 600;'; // Vibrant green for positive GD
+                gdStyle = 'color: #22c55e; font-weight: 600;';
                 gdText = `+${t.gd}`;
             } else if (t.gd < 0) {
-                gdStyle = 'color: #ef4444; font-weight: 600;'; // Clean warning red for negative GD
+                gdStyle = 'color: #ef4444; font-weight: 600;';
                 gdText = `${t.gd}`;
             }
 
