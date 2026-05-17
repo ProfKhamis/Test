@@ -27,7 +27,7 @@
         .container { padding: 20px 10px; display: flex; flex-direction: column; align-items: center; }
         .hidden { display: none !important; }
 
-        .standings-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
+        .standings-wrapper { width: 100%; max-width: 950px; display: flex; flex-direction: column; align-items: center; }
         .standings-card { 
             width: 100%; background: #000; border: 2px solid var(--gold); 
             border-radius: 8px; padding: 20px; box-sizing: border-box; 
@@ -46,6 +46,13 @@
             text-transform: uppercase;
         }
         
+        /* Form Guide Badge Styles */
+        .form-container { display: flex; justify-content: center; gap: 4px; }
+        .form-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 900; color: #fff; text-transform: uppercase; }
+        .form-w { background: #22c55e; }
+        .form-d { background: #4b5563; }
+        .form-l { background: #ef4444; }
+
         .pts-col { font-weight: 900; color: var(--gold-bright); font-size: 1rem; }
         .qualify-line { border-left: 4px solid #00ff00; }
 
@@ -108,7 +115,7 @@
                             <tr>
                                 <th>Pos</th>
                                 <th style="text-align:left">Team</th>
-                                <th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
+                                <th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Form (Last 5)</th><th>Pts</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -275,7 +282,7 @@
     function resetTournamentStructure(count) {
         state.teamCount = parseInt(count);
         state.hasKnockoutStarted = false;
-        state.teams = Array.from({length: state.teamCount}, (_, i) => ({ id: i, name: `Team ${i+1}`, p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0 }));
+        state.teams = Array.from({length: state.teamCount}, (_, i) => ({ id: i, name: `Team ${i+1}`, p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0, form: [] }));
         state.leagueMatches = [];
         state.bracket = [];
 
@@ -355,16 +362,24 @@
     }
 
     function updateLeagueStats() {
-        state.teams.forEach(t => { t.p=0; t.w=0; t.d=0; t.l=0; t.gf=0; t.ga=0; t.gd=0; t.pts=0; });
+        state.teams.forEach(t => { t.p=0; t.w=0; t.d=0; t.l=0; t.gf=0; t.ga=0; t.gd=0; t.pts=0; t.form = []; });
         state.leagueMatches.forEach(m => {
             if (m.s1 === null) return;
             const h = state.teams.find(t => t.id === m.t1);
             const a = state.teams.find(t => t.id === m.t2);
             if(!h || !a) return;
             h.p++; a.p++; h.gf += m.s1; h.ga += m.s2; a.gf += m.s2; a.ga += m.s1;
-            if (m.s1 > m.s2) { h.w++; h.pts += 3; a.l++; }
-            else if (m.s2 > m.s1) { a.w++; a.pts += 3; h.l++; }
-            else { h.d++; a.d++; h.pts++; a.pts++; }
+            
+            if (m.s1 > m.s2) { 
+                h.w++; h.pts += 3; a.l++; 
+                h.form.push('W'); a.form.push('L');
+            } else if (m.s2 > m.s1) { 
+                a.w++; a.pts += 3; h.l++; 
+                h.form.push('L'); a.form.push('W');
+            } else { 
+                h.d++; a.d++; h.pts++; a.pts++; 
+                h.form.push('D'); a.form.push('D');
+            }
             h.gd = h.gf - h.ga; a.gd = a.gf - a.ga;
         });
         
@@ -392,6 +407,17 @@
                 gdText = `${t.gd}`;
             }
 
+            // Create form badges for the last 5 matches
+            const recentForm = (t.form || []).slice(-5);
+            const formHtml = recentForm.length > 0 ? `
+                <div class="form-container">
+                    ${recentForm.map(outcome => {
+                        const badgeClass = outcome === 'W' ? 'form-w' : (outcome === 'L' ? 'form-l' : 'form-d');
+                        return `<span class="form-dot ${badgeClass}">${outcome}</span>`;
+                    }).join('')}
+                </div>
+            ` : `<span style="color:#666;">-</span>`;
+
             return `
             <tr class="${i < 8 ? 'qualify-line' : ''}">
                 <td class="pos-col">${i + 1}</td>
@@ -402,6 +428,7 @@
                 <td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
                 <td>${t.gf}</td><td>${t.ga}</td>
                 <td style="${gdStyle}">${gdText}</td>
+                <td>${formHtml}</td>
                 <td class="pts-col">${t.pts}</td>
             </tr>
             `;
