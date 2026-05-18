@@ -90,6 +90,7 @@
         .checkbox-row input { width: auto; margin: 0; cursor: pointer; }
 
         .penalty-panel { background: #1a1111; border: 1px solid #dc2626; border-radius: 6px; padding: 12px; margin-top: 15px; margin-bottom: 15px; }
+        .penalty-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -174,15 +175,18 @@
             <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Names</button>
         </div>
 
-        <!-- POST-SUBMISSION PENALTY ADJUSTMENT -->
+        <!-- POST-SUBMISSION PENALTY ADJUSTMENT & UNDO SYSTEM -->
         <div class="penalty-panel">
             <label style="color:#f87171;">🔴 Post-Submission Penalty Adjuster</label>
-            <p style="font-size:0.7rem; color:#bbb; margin:4px 0 10px 0;">Deduct points from teams directly (e.g. for results turned in late after you already logged their score).</p>
+            <p style="font-size:0.7rem; color:#bbb; margin:4px 0 10px 0;">Deduct points or reverse deductions from teams directly if match metrics or codes were updated incorrectly.</p>
             <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:8px; align-items:center;">
                 <select id="penalty-team-select" style="padding:6px; font-size:0.8rem;"></select>
-                <input type="number" id="penalty-amount-input" value="1" min="0" style="padding:6px; font-size:0.8rem;" placeholder="Points value">
+                <input type="number" id="penalty-amount-input" value="1" min="1" style="padding:6px; font-size:0.8rem;" placeholder="Points value">
             </div>
-            <button class="admin-btn full-btn" style="background:#dc2626; color:#fff; margin-top:8px; font-size:0.8rem;" onclick="applyManualPenalty()">Apply Point Penalty</button>
+            <div class="penalty-action-grid">
+                <button class="admin-btn" style="background:#dc2626; color:#fff; font-size:0.8rem; justify-content:center;" onclick="applyManualPenalty()">Apply Penalty</button>
+                <button class="admin-btn" style="background:#22c55e; color:#fff; font-size:0.8rem; justify-content:center;" onclick="undoManualPenalty()">Undo Penalty</button>
+            </div>
         </div>
 
         <div class="form-group">
@@ -593,7 +597,7 @@
         const teamId = parseInt(document.getElementById('penalty-team-select').value);
         const amt = parseInt(document.getElementById('penalty-amount-input').value);
         
-        if (isNaN(teamId) || isNaN(amt) || amt < 0) {
+        if (isNaN(teamId) || isNaN(amt) || amt <= 0) {
             alert("Please enter a valid positive penalty amount.");
             return;
         }
@@ -606,6 +610,32 @@
         renderAll();
         populatePenaltyTeamsDropdown(); 
         alert(`Successfully deducted ${amt} pt(s) from ${team.name}!`);
+    }
+
+    function undoManualPenalty() {
+        const teamId = parseInt(document.getElementById('penalty-team-select').value);
+        const amt = parseInt(document.getElementById('penalty-amount-input').value);
+        
+        if (isNaN(teamId) || isNaN(amt) || amt <= 0) {
+            alert("Please enter a valid positive value to restore.");
+            return;
+        }
+
+        const team = state.teams.find(t => t.id === teamId);
+        if (!team) return;
+
+        const currentPenalty = state.penalties[teamId] || 0;
+        if (currentPenalty === 0) {
+            alert(`This team (${team.name}) does not have any recorded point penalties to reverse.`);
+            return;
+        }
+
+        // Deduct from the penalty counter, down to a minimum of 0
+        state.penalties[teamId] = Math.max(0, currentPenalty - amt);
+        
+        renderAll();
+        populatePenaltyTeamsDropdown(); 
+        alert(`Successfully restored ${amt} pt(s) back to ${team.name}!`);
     }
 
     function saveTeamNames() {
