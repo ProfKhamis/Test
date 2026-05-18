@@ -174,7 +174,7 @@
             <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Names</button>
         </div>
 
-        <!-- NEW: SEPARATE LATE PENALTY OVERRIDE ADJUSTMENT -->
+        <!-- POST-SUBMISSION PENALTY ADJUSTMENT -->
         <div class="penalty-panel">
             <label style="color:#f87171;">🔴 Post-Submission Penalty Adjuster</label>
             <p style="font-size:0.7rem; color:#bbb; margin:4px 0 10px 0;">Deduct points from teams directly (e.g. for results turned in late after you already logged their score).</p>
@@ -461,14 +461,12 @@
                 </div>
             ` : `<span style="color:#666;">-</span>`;
 
-            const penaltyBadge = state.penalties[t.id] ? `<span style="color:#ef4444; font-size:0.7rem; font-weight:bold; margin-left:5px;">(-${state.penalties[t.id]} Pts)</span>` : '';
-
             return `
             <tr class="${i < 8 ? 'qualify-line' : ''}">
                 <td class="pos-col">${i + 1}</td>
                 <td class="team-col">
                     <div class="team-logo" style="background:${color}">${initials}</div>
-                    ${t.name} ${penaltyBadge}
+                    ${t.name}
                 </td>
                 <td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
                 <td>${t.gf}</td><td>${t.ga}</td>
@@ -546,7 +544,7 @@
         document.getElementById('chk-force-played').checked = false;
         populateAdminTeams();
         populateStagesDropdown();
-        populatePenaltyTeamsDropdown(); // Load penalty team items
+        populatePenaltyTeamsDropdown(); 
         adminModal.showModal();
     }
 
@@ -583,7 +581,6 @@
         `).join('');
     }
 
-    // NEW: Populates the post-submission dropdown with existing active teams
     function populatePenaltyTeamsDropdown() {
         const dropdown = document.getElementById('penalty-team-select');
         dropdown.innerHTML = state.teams.map(t => {
@@ -592,7 +589,6 @@
         }).join('');
     }
 
-    // NEW: Performs manual point deductions seamlessly
     function applyManualPenalty() {
         const teamId = parseInt(document.getElementById('penalty-team-select').value);
         const amt = parseInt(document.getElementById('penalty-amount-input').value);
@@ -605,11 +601,10 @@
         const team = state.teams.find(t => t.id === teamId);
         if (!team) return;
 
-        // Cumulative assignment
         state.penalties[teamId] = (state.penalties[teamId] || 0) + amt;
         
         renderAll();
-        populatePenaltyTeamsDropdown(); // Refresh labels
+        populatePenaltyTeamsDropdown(); 
         alert(`Successfully deducted ${amt} pt(s) from ${team.name}!`);
     }
 
