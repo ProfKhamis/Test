@@ -46,7 +46,6 @@
             text-transform: uppercase;
         }
         
-        /* Form Guide Badge Styles */
         .form-container { display: flex; justify-content: center; gap: 4px; }
         .form-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 900; color: #fff; text-transform: uppercase; }
         .form-w { background: #22c55e; }
@@ -85,6 +84,12 @@
         .full-btn { width: 100%; margin-top: 10px; }
         .team-grid-container { max-height: 200px; overflow-y: auto; border: 1px solid #222; padding: 5px; margin-bottom: 10px; }
         .recovery-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+
+        .checkbox-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #161616; padding: 10px; border-radius: 5px; border: 1px solid #222; }
+        .checkbox-row { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; cursor: pointer; }
+        .checkbox-row input { width: auto; margin: 0; cursor: pointer; }
+
+        .penalty-panel { background: #1a1111; border: 1px solid #dc2626; border-radius: 6px; padding: 12px; margin-top: 15px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -169,6 +174,17 @@
             <button class="admin-btn full-btn" onclick="saveTeamNames()">Update Team Names</button>
         </div>
 
+        <!-- NEW: SEPARATE LATE PENALTY OVERRIDE ADJUSTMENT -->
+        <div class="penalty-panel">
+            <label style="color:#f87171;">🔴 Post-Submission Penalty Adjuster</label>
+            <p style="font-size:0.7rem; color:#bbb; margin:4px 0 10px 0;">Deduct points from teams directly (e.g. for results turned in late after you already logged their score).</p>
+            <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:8px; align-items:center;">
+                <select id="penalty-team-select" style="padding:6px; font-size:0.8rem;"></select>
+                <input type="number" id="penalty-amount-input" value="1" min="0" style="padding:6px; font-size:0.8rem;" placeholder="Points value">
+            </div>
+            <button class="admin-btn full-btn" style="background:#dc2626; color:#fff; margin-top:8px; font-size:0.8rem;" onclick="applyManualPenalty()">Apply Point Penalty</button>
+        </div>
+
         <div class="form-group">
             <label>Select Stage to Score</label>
             <select id="score-stage-select" onchange="populateMatchesDropdown()"></select>
@@ -185,10 +201,23 @@
                 <option value="2">Leg 2</option>
             </select>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 40px 1fr; align-items:center; gap:10px; margin-bottom:15px;">
+        <div style="display:grid; grid-template-columns: 1fr 40px 1fr; align-items:center; gap:10px; margin-bottom:12px;">
             <input type="number" id="inp-s1" placeholder="Home Score">
             <span style="text-align:center; font-weight: bold; color: var(--gold);">vs</span>
             <input type="number" id="inp-s2" placeholder="Away Score">
+        </div>
+
+        <!-- SUBMISSION CONTROLS -->
+        <div class="checkbox-container">
+            <label style="color:#aaa; font-size:0.65rem; margin-bottom:3px;">Submission Modifiers (For Live Matches Only)</label>
+            <label class="checkbox-row">
+                <input type="checkbox" id="chk-deduct-pts">
+                <span>⚠️ Deduct 1 Pt from both teams concurrently during score submission</span>
+            </label>
+            <label class="checkbox-row">
+                <input type="checkbox" id="chk-force-played">
+                <span>Force Matches Played (P) increase if leaving score field blank</span>
+            </label>
         </div>
 
         <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit Match Score</button>
@@ -210,7 +239,9 @@
         teams: [],
         leagueMatches: [],
         bracket: [],
-        hasKnockoutStarted: false
+        hasKnockoutStarted: false,
+        penalties: {},
+        unsubmittedMatches: [] 
     };
 
     const teamColors = ['#1e40af','#b91c1c','#047857','#b45309', '#6d28d9', '#be185d', '#0f766e', '#a16207', '#4338ca', '#9f1239', '#5b21b6', '#9d174d', '#065f46', '#92400e', '#1e3a8a', '#78350f'];
@@ -219,42 +250,35 @@
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             state = JSON.parse(saved);
+            if (!state.penalties) state.penalties = {};
+            if (!state.unsubmittedMatches) state.unsubmittedMatches = [];
         } else {
             resetTournamentStructure(10);
         }
         renderAll();
     }
 
-    // --- BIOMETRIC / DEVICE SECURITY LOCK ---
     async function openAdminWithDeviceLock() {
         if (!window.PublicKeyCredential) {
             alert("Your browser does not support device-level biometric authentication. Opening panel normally.");
             openAdmin(); 
             return;
         }
-
         const authIdRaw = localStorage.getItem('mg_admin_auth_id');
-
         try {
             if (!authIdRaw) {
-                if (confirm("Admin device lock is not set up yet.\n\nDo you want to secure this control panel using your phone's native lock system (Fingerprint, Face ID, or PIN)?")) {
+                if (confirm("Admin device lock is not set up yet.\n\nDo you want to secure this control panel using your phone's native lock system?")) {
                     const publicKey = {
                         challenge: new Uint8Array(32),
                         rp: { name: "MG ELITE CUP" },
-                        user: {
-                            id: new Uint8Array(16),
-                            name: "admin",
-                            displayName: "Tournament Admin"
-                        },
+                        user: { id: new Uint8Array(16), name: "admin", displayName: "Tournament Admin" },
                         pubKeyCredParams: [{ type: "public-key", alg: -7 }],
                         authenticatorSelection: { userVerification: "required" },
                         timeout: 60000
                     };
-
                     const cred = await navigator.credentials.create({ publicKey });
                     const credId = Array.from(new Uint8Array(cred.rawId));
                     localStorage.setItem('mg_admin_auth_id', JSON.stringify(credId));
-                    
                     alert("Device security paired successfully!");
                     openAdmin(); 
                 }
@@ -262,14 +286,10 @@
                 const storedId = new Uint8Array(JSON.parse(authIdRaw));
                 const publicKey = {
                     challenge: new Uint8Array(32), 
-                    allowCredentials: [{
-                        id: storedId,
-                        type: "public-key"
-                    }],
+                    allowCredentials: [{ id: storedId, type: "public-key" }],
                     userVerification: "required",
                     timeout: 60000
                 };
-
                 await navigator.credentials.get({ publicKey });
                 openAdmin(); 
             }
@@ -285,6 +305,8 @@
         state.teams = Array.from({length: state.teamCount}, (_, i) => ({ id: i, name: `Team ${i+1}`, p:0, w:0, d:0, l:0, gf:0, ga:0, gd:0, pts:0, form: [] }));
         state.leagueMatches = [];
         state.bracket = [];
+        state.penalties = {};
+        state.unsubmittedMatches = [];
 
         if (state.teamCount === 16) {
             state.hasKnockoutStarted = true;
@@ -308,7 +330,7 @@
                 const t1 = pool[i];
                 const t2 = pool[totalTeams - 1 - i];
                 if (t1 !== -1 && t2 !== -1) {
-                    state.leagueMatches.push({ id: `l-${r}-${i}`, md: r + 1, t1, t2, s1: null, s2: null });
+                    state.leagueMatches.push({ id: `l-${r}-${i}`, md: r + 1, t1, t2, s1: null, s2: null, forcePlayed: false });
                 }
             }
             pool.splice(1, 0, pool.pop());
@@ -363,11 +385,28 @@
 
     function updateLeagueStats() {
         state.teams.forEach(t => { t.p=0; t.w=0; t.d=0; t.l=0; t.gf=0; t.ga=0; t.gd=0; t.pts=0; t.form = []; });
+        
         state.leagueMatches.forEach(m => {
-            if (m.s1 === null) return;
             const h = state.teams.find(t => t.id === m.t1);
             const a = state.teams.find(t => t.id === m.t2);
             if(!h || !a) return;
+
+            if (state.unsubmittedMatches.includes(m.id)) {
+                h.p++; 
+                a.p++;
+                return; 
+            }
+
+            if (m.s1 === null) {
+                if (m.forcePlayed) {
+                    h.p++; a.p++;
+                    h.d++; a.d++;
+                    h.pts++; a.pts++;
+                    h.form.push('D'); a.form.push('D');
+                }
+                return;
+            }
+
             h.p++; a.p++; h.gf += m.s1; h.ga += m.s2; a.gf += m.s2; a.ga += m.s1;
             
             if (m.s1 > m.s2) { 
@@ -381,6 +420,12 @@
                 h.form.push('D'); a.form.push('D');
             }
             h.gd = h.gf - h.ga; a.gd = a.gf - a.ga;
+        });
+
+        state.teams.forEach(t => {
+            if (state.penalties[t.id]) {
+                t.pts = Math.max(0, t.pts - state.penalties[t.id]);
+            }
         });
         
         state.teams.sort((a, b) => {
@@ -398,7 +443,6 @@
             
             let gdStyle = 'color: #888888;';
             let gdText = '0';
-            
             if (t.gd > 0) {
                 gdStyle = 'color: #22c55e; font-weight: 600;';
                 gdText = `+${t.gd}`;
@@ -407,7 +451,6 @@
                 gdText = `${t.gd}`;
             }
 
-            // Create form badges for the last 5 matches
             const recentForm = (t.form || []).slice(-5);
             const formHtml = recentForm.length > 0 ? `
                 <div class="form-container">
@@ -418,12 +461,14 @@
                 </div>
             ` : `<span style="color:#666;">-</span>`;
 
+            const penaltyBadge = state.penalties[t.id] ? `<span style="color:#ef4444; font-size:0.7rem; font-weight:bold; margin-left:5px;">(-${state.penalties[t.id]} Pts)</span>` : '';
+
             return `
             <tr class="${i < 8 ? 'qualify-line' : ''}">
                 <td class="pos-col">${i + 1}</td>
                 <td class="team-col">
                     <div class="team-logo" style="background:${color}">${initials}</div>
-                    ${t.name}
+                    ${t.name} ${penaltyBadge}
                 </td>
                 <td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
                 <td>${t.gf}</td><td>${t.ga}</td>
@@ -445,7 +490,16 @@
             state.leagueMatches.filter(m => m.md === i).forEach(m => {
                 const t1 = state.teams.find(t => t.id === m.t1).name;
                 const t2 = state.teams.find(t => t.id === m.t2).name;
-                const scoreText = m.s1 !== null ? `${m.s1} - ${m.s2}` : 'vs';
+                
+                let scoreText = 'vs';
+                if (state.unsubmittedMatches.includes(m.id)) {
+                    scoreText = "N/A (Penalized)";
+                } else if (m.s1 !== null) {
+                    scoreText = `${m.s1} - ${m.s2}`;
+                } else if (m.s1 === null && m.forcePlayed) {
+                    scoreText = "0 - 0";
+                }
+
                 html += `
                     <div class="fixture-row">
                         <div class="f-team-left">${t1}</div>
@@ -488,8 +542,11 @@
 
     function openAdmin() {
         document.getElementById('team-count-config').value = state.teamCount;
+        document.getElementById('chk-deduct-pts').checked = false;
+        document.getElementById('chk-force-played').checked = false;
         populateAdminTeams();
         populateStagesDropdown();
+        populatePenaltyTeamsDropdown(); // Load penalty team items
         adminModal.showModal();
     }
 
@@ -524,6 +581,36 @@
         document.getElementById('team-inputs-grid').innerHTML = state.teams.map(t => `
             <input type="text" value="${t.name}" data-id="${t.id}" style="font-size:0.75rem; padding:6px;">
         `).join('');
+    }
+
+    // NEW: Populates the post-submission dropdown with existing active teams
+    function populatePenaltyTeamsDropdown() {
+        const dropdown = document.getElementById('penalty-team-select');
+        dropdown.innerHTML = state.teams.map(t => {
+            const currentPen = state.penalties[t.id] ? ` (Currently: -${state.penalties[t.id]} pts)` : '';
+            return `<option value="${t.id}">${t.name}${currentPen}</option>`;
+        }).join('');
+    }
+
+    // NEW: Performs manual point deductions seamlessly
+    function applyManualPenalty() {
+        const teamId = parseInt(document.getElementById('penalty-team-select').value);
+        const amt = parseInt(document.getElementById('penalty-amount-input').value);
+        
+        if (isNaN(teamId) || isNaN(amt) || amt < 0) {
+            alert("Please enter a valid positive penalty amount.");
+            return;
+        }
+
+        const team = state.teams.find(t => t.id === teamId);
+        if (!team) return;
+
+        // Cumulative assignment
+        state.penalties[teamId] = (state.penalties[teamId] || 0) + amt;
+        
+        renderAll();
+        populatePenaltyTeamsDropdown(); // Refresh labels
+        alert(`Successfully deducted ${amt} pt(s) from ${team.name}!`);
     }
 
     function saveTeamNames() {
@@ -572,7 +659,7 @@
 
         if (stage === 'league') {
             legWrapper.style.display = 'none';
-            const openLeagueMatches = state.leagueMatches.filter(m => m.s1 === null);
+            const openLeagueMatches = state.leagueMatches.filter(m => m.s1 === null && !state.unsubmittedMatches.includes(m.id));
             filteredOptions = openLeagueMatches.map(m => {
                 const h = state.teams.find(t => t.id === m.t1)?.name || 'TBD';
                 const a = state.teams.find(t => t.id === m.t2)?.name || 'TBD';
@@ -621,15 +708,45 @@
     function saveMatchScore() {
         const stage = document.getElementById('score-stage-select').value;
         const matchId = document.getElementById('score-match-select').value;
-        const s1 = parseInt(document.getElementById('inp-s1').value);
-        const s2 = parseInt(document.getElementById('inp-s2').value);
+        
+        const rawS1 = document.getElementById('inp-s1').value;
+        const rawS2 = document.getElementById('inp-s2').value;
+        const s1 = parseInt(rawS1);
+        const s2 = parseInt(rawS2);
 
-        if (!matchId || isNaN(s1) || isNaN(s2)) return;
+        const deductPts = document.getElementById('chk-deduct-pts').checked;
+        const forcePlayed = document.getElementById('chk-force-played').checked;
+
+        if (!matchId) return;
 
         if (stage === 'league') {
             const m = state.leagueMatches.find(x => x.id === matchId);
-            m.s1 = s1; m.s2 = s2;
+            
+            if (isNaN(s1) || isNaN(s2)) {
+                if (deductPts) {
+                    state.penalties[m.t1] = (state.penalties[m.t1] || 0) + 1;
+                    state.penalties[m.t2] = (state.penalties[m.t2] || 0) + 1;
+                    state.unsubmittedMatches.push(m.id);
+                } else if (forcePlayed) {
+                    m.s1 = null;
+                    m.s2 = null;
+                    m.forcePlayed = true;
+                } else {
+                    alert("Please insert score goals or apply submission modifiers!");
+                    return;
+                }
+            } else {
+                m.s1 = s1; 
+                m.s2 = s2;
+                m.forcePlayed = forcePlayed;
+
+                if (deductPts) {
+                    state.penalties[m.t1] = (state.penalties[m.t1] || 0) + 1;
+                    state.penalties[m.t2] = (state.penalties[m.t2] || 0) + 1;
+                }
+            }
         } else {
+            if (isNaN(s1) || isNaN(s2)) return;
             const m = state.bracket.find(x => x.id === matchId);
             const roundIdx = parseInt(stage.split('-')[1]);
             const isFinalRound = (roundIdx === ((state.teamCount === 16) ? 3 : 2));
@@ -646,6 +763,9 @@
         
         document.getElementById('inp-s1').value = '';
         document.getElementById('inp-s2').value = '';
+        document.getElementById('chk-deduct-pts').checked = false;
+        document.getElementById('chk-force-played').checked = false;
+        
         renderAll();
         adminModal.close();
     }
@@ -725,7 +845,6 @@
         });
     }
 
-    // --- RECOVERY FUNCTIONS ---
     function exportData() {
         const dataStr = JSON.stringify(state, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -745,6 +864,8 @@
                 const importedState = JSON.parse(e.target.result);
                 if (importedState.teams && importedState.leagueMatches) {
                     state = importedState;
+                    if(!state.penalties) state.penalties = {};
+                    if(!state.unsubmittedMatches) state.unsubmittedMatches = [];
                     renderAll();
                     alert("Data recovered successfully!");
                     adminModal.close();
