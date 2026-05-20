@@ -190,13 +190,13 @@
         </div>
 
         <div class="form-group">
-            <label>Select Stage to Score</label>
+            <label>Select Stage to Score / Edit</label>
             <select id="score-stage-select" onchange="populateMatchesDropdown()"></select>
         </div>
         <div class="form-group">
             <label>Select Match</label>
             <select id="score-match-select" onchange="updateScoreInputsPlaceholder()"></select>
-            <small id="no-matches-warning" style="color: #ef4444; display:none; margin-top:5px; font-weight:600;">⚠️ All matches in this section are completed!</small>
+            <small id="no-matches-warning" style="color: #ef4444; display:none; margin-top:5px; font-weight:600;">⚠️ No matches available in this section!</small>
         </div>
         <div class="form-group" id="leg-select-wrapper">
             <label>Select Leg Game</label>
@@ -224,7 +224,7 @@
             </label>
         </div>
 
-        <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit Match Score</button>
+        <button class="admin-btn full-btn" id="submit-score-btn" onclick="saveMatchScore()">Submit / Update Score</button>
         
         <div class="recovery-btns">
             <button class="admin-btn" style="background:#059669; color:#fff;" onclick="exportData()">💾 Export JSON</button>
@@ -684,11 +684,12 @@
 
         if (stage === 'league') {
             legWrapper.style.display = 'none';
-            const openLeagueMatches = state.leagueMatches.filter(m => m.s1 === null && !state.unsubmittedMatches.includes(m.id));
-            filteredOptions = openLeagueMatches.map(m => {
+            // CHANGED: Showing ALL matches so they can be edited cleanly
+            filteredOptions = state.leagueMatches.map(m => {
                 const h = state.teams.find(t => t.id === m.t1)?.name || 'TBD';
                 const a = state.teams.find(t => t.id === m.t2)?.name || 'TBD';
-                return `<option value="${m.id}">MD${m.md}: ${h} vs ${a}</option>`;
+                const status = m.s1 !== null ? ` (Edited: ${m.s1}-${m.s2})` : '';
+                return `<option value="${m.id}">MD${m.md}: ${h} vs ${a}${status}</option>`;
             }).join('');
         } else {
             const roundIdx = parseInt(stage.split('-')[1]);
@@ -696,11 +697,17 @@
             legWrapper.style.display = isFinalRound ? 'none' : 'block';
             
             const roundMatches = state.bracket.filter(m => m.r === roundIdx);
-            let openKnockoutMatches = (isFinalRound) ? 
-                roundMatches.filter(m => m.s1 === null) : 
-                (legSel === "1" ? roundMatches.filter(m => m.l1_1 === null) : roundMatches.filter(m => m.l2_1 === null));
-
-            filteredOptions = openKnockoutMatches.map((m, i) => `<option value="${m.id}">${m.t1} vs ${m.t2}</option>`).join('');
+            // CHANGED: Display all matches in the knockout rounds to allow modifications
+            filteredOptions = roundMatches.map(m => {
+                let status = '';
+                if (isFinalRound) {
+                    if (m.s1 !== null) status = ` (Edited: ${m.s1}-${m.s2})`;
+                } else {
+                    if (legSel === "1" && m.l1_1 !== null) status = ` (Edited: ${m.l1_1}-${m.l1_2})`;
+                    if (legSel === "2" && m.l2_1 !== null) status = ` (Edited: ${m.l2_1}-${m.l2_2})`;
+                }
+                return `<option value="${m.id}">${m.t1} vs ${m.t2}${status}</option>`;
+            }).join('');
         }
 
         matchSel.innerHTML = filteredOptions;
@@ -715,19 +722,36 @@
     function updateScoreInputsPlaceholder() {
         const stage = document.getElementById('score-stage-select').value;
         const matchId = document.getElementById('score-match-select').value;
+        const legSel = document.getElementById('score-leg-select').value;
         if(!matchId) return;
 
         let t1Name = "Home", t2Name = "Away";
+        let val1 = '', val2 = '';
+
         if (stage === 'league') {
             const m = state.leagueMatches.find(x => x.id === matchId);
             t1Name = state.teams.find(t => t.id === m.t1)?.name || "Home";
             t2Name = state.teams.find(t => t.id === m.t2)?.name || "Away";
+            if (m.s1 !== null) { val1 = m.s1; val2 = m.s2; }
         } else {
             const m = state.bracket.find(x => x.id === matchId);
             t1Name = m.t1; t2Name = m.t2;
+            const roundIdx = parseInt(stage.split('-')[1]);
+            const isFinalRound = (roundIdx === ((state.teamCount === 16) ? 3 : 2));
+
+            if (isFinalRound) {
+                if (m.s1 !== null) { val1 = m.s1; val2 = m.s2; }
+            } else {
+                if (legSel === "1" && m.l1_1 !== null) { val1 = m.l1_1; val2 = m.l1_2; }
+                if (legSel === "2" && m.l2_1 !== null) { val1 = m.l2_1; val2 = m.l2_2; }
+            }
         }
         document.getElementById('inp-s1').placeholder = t1Name;
         document.getElementById('inp-s2').placeholder = t2Name;
+        
+        // CHANGED: Autofill current values if the score has already been set
+        document.getElementById('inp-s1').value = val1;
+        document.getElementById('inp-s2').value = val2;
     }
 
     function saveMatchScore() {
@@ -908,3 +932,4 @@
 </script>
 </body>
 </html>
+er
